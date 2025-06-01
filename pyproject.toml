@@ -1,0 +1,17 @@
+[project]
+name = "gitreviewer"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Francisco Filho", email = "francisco@capimgrosso.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+gitreviewer = "gitreviewer:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
