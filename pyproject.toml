@@ -7,7 +7,10 @@ authors = [
     { name = "Francisco Filho", email = "francisco@capimgrosso.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "gitpython>=3.1.44",
+    "ollama>=0.5.1",
+]
 
 [project.scripts]
 gitreviewer = "gitreviewer:main"
