@@ -1,31 +1,9 @@
 import argparse
 import os
-from git import Repo, InvalidGitRepositoryError
 import ollama
 
-def get_git_diff(repo_path):
-    """
-    Gets the diff of the current changes in the specified Git repository.
-    This will get the diff between the working tree and the latest commit.
-    """
-    try:
-        repo = Repo(repo_path)
-        # Check if there are any changes in the working directory
-        if repo.is_dirty(untracked_files=True):
-            # Get the diff between the working tree and the index (staged changes)
-            # and also between the index and HEAD (committed changes)
-            # For simplicity, let's get the diff of all uncommitted changes
-            # This includes staged and unstaged changes relative to HEAD
-            diff = repo.git.diff('HEAD')
-            if not diff:
-                return "No changes detected in the working directory relative to HEAD."
-            return diff
-        else:
-            return "No uncommitted changes found in the repository."
-    except InvalidGitRepositoryError:
-        return f"Error: '{repo_path}' is not a valid Git repository."
-    except Exception as e:
-        return f"An error occurred while getting git diff: {e}"
+from gitreviewer.tools.git import GitDiffTool
+
 
 def review_code_with_llm(diff_content, model_name="llama2"):
     """
@@ -78,13 +56,14 @@ def main():
 
     print(f"Reviewing repository: {repo_path}")
 
-    diff = get_git_diff(repo_path)
+    diff_tool = GitDiffTool()
+    diff = diff_tool.get_git_diff(repo_path)
     print("\n--- Git Diff ---")
     print(diff)
     print("----------------\n")
 
     if "Error:" in diff or "No changes" in diff:
-        print(diff) # Print the error or no changes message directly
+        print(diff)
     else:
         print("\n--- LLM Code Review Feedback (Streaming) ---")
         for chunk in review_code_with_llm(diff, args.model):

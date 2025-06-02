@@ -6,18 +6,6 @@ from tqdm import tqdm
 from tree_sitter import Language, Parser
 from tree_sitter_language_pack import get_binding, get_language, get_parser
 
-# --- Configuration ---
-# Path to the directory where you've cloned or downloaded the tree-sitter-java grammar.
-# You might need to compile it first if you haven't.
-# Example: If you cloned 'tree-sitter-java' into a 'grammars' folder, it would be 'grammars/tree-sitter-java'
-#JAVA_GRAMMAR_PATH = './grammars/tree-sitter-java'
-# Path to the compiled .so or .dll file (e.g., 'build/my-languages.so')
-# This file is generated after compiling the grammar.
-# See instructions below on how to compile the grammar.
-#PATH_TO_BUILD_DIR = './build'
-#LANGUAGE_SO_FILE = os.path.join(PATH_TO_BUILD_DIR, 'java.so') # Or .dll for Windows
-
-# --- Tree-sitter Setup ---
 try:
     parser = get_parser("java")
     JAVA_LANGUAGE = get_language("java")
