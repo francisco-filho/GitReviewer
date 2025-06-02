@@ -1,8 +1,13 @@
 import argparse
 import os
 import ollama
+import logging
 
 from gitreviewer.tools.git import GitDiffTool
+from gitreviewer.llm import LLM
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("gitreviewer.main")
 
 
 def review_code_with_llm(diff_content, model_name="llama2"):
@@ -25,30 +30,17 @@ def review_code_with_llm(diff_content, model_name="llama2"):
     Provide your feedback in a concise and clear manner.
     Finish with recommendations.
     """
-    try:
-        print(f"Sending diff to LLM model: {model_name} and streaming response...")
-        # Use ollama.chat with stream=True for streaming responses
-        stream = ollama.chat(model=model_name, messages=[
-            {'role': 'user', 'content': prompt},
-        ], stream=True, think=False)
 
-        for chunk in stream:
-            # Check if 'content' exists in the 'message' dictionary
-            if 'message' in chunk and 'content' in chunk['message']:
-                yield chunk['message']['content']
-            # Optionally, handle done status or other meta-information
-            # if 'done' in chunk and chunk['done']:
-            #     break
-
-    except ollama.ResponseError as e:
-        yield f"\nError communicating with Ollama LLM: {e}. Make sure your Ollama server is running and the model '{model_name}' is downloaded."
-    except Exception as e:
-        yield f"\nAn unexpected error occurred during LLM review: {e}"
+    print(f"Sending diff to LLM model: {model_name} and streaming response...")
+    llm = LLM()
+    for token in llm.chat(prompt):
+        yield token
 
 def main():
     parser = argparse.ArgumentParser(description="Review code changes in a Git repository using a local LLM.")
     parser.add_argument("--repo", required=True, help="Path to the Git repository.")
-    parser.add_argument("--model", default="deepseek-r1:8b", help="Name of the Ollama model to use (default: llama2).")
+    parser.add_argument("--commit", required=True, type=bool, help="To show commit message")
+    parser.add_argument("--model", default="deepseek-r1:8b", help="Name of the Ollama model to use (default: deepseek-r1:8b).")
 
     args = parser.parse_args()
 
@@ -58,9 +50,21 @@ def main():
 
     diff_tool = GitDiffTool()
     diff = diff_tool.get_git_diff(repo_path)
-    print("\n--- Git Diff ---")
-    print(diff)
-    print("----------------\n")
+    logger.debug(f"\n--- Git Diff ---\n\n{diff}\n---------------")
+
+    msgprompt = f"""
+        Sugest a commit message for the following diff: \n\n
+         
+        Diff:
+         {diff}
+        """
+    if args.commit:
+        llm = LLM()
+        print(llm.chat(msgprompt))
+        return
+    else:
+        logger.info("No commit message.")
+        return
 
     if "Error:" in diff or "No changes" in diff:
         print(diff)

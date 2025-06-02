@@ -1,10 +1,8 @@
-import os
 import json
-import tree_sitter
+import os
 from time import sleep
 from tqdm import tqdm
-from tree_sitter import Language, Parser
-from tree_sitter_language_pack import get_binding, get_language, get_parser
+from tree_sitter_language_pack import get_language, get_parser
 
 try:
     parser = get_parser("java")
@@ -14,10 +12,7 @@ try:
 
 except Exception as e:
     print(f"Error initializing Tree-sitter: {e}")
-    print("Please ensure you have installed `tree-sitter` (`pip install tree-sitter`)")
-    print("and have compiled the `tree-sitter-java` grammar correctly.")
-    print("Refer to the instructions in the comments of this script.")
-    exit(1) # Exit if parser cannot be initialized
+    exit(1)
 
 def get_node_text(node, source_code_bytes):
     """Extracts the text content of a Tree-sitter node."""
@@ -105,15 +100,11 @@ def parse_java_file(file_path):
             source_code_bytes = f.read()
 
         tree = parser.parse(source_code_bytes)
-        root_node = tree.root_node
 
         # Add FILE entry first for this file
         index_entries.append(f"FILE: {os.path.basename(file_path)}")
 
-        # Determine package name
         current_package = "default" # Default package if no declaration found
-        #package_declaration_node = root_node.child_by_field_name('package_declaration')
-        #q = JAVA_LANGUAGE.query("(package_declaration (scoped_identifier) @package_name)")
         q = JAVA_LANGUAGE.query("""
         (
             (package_declaration (scoped_identifier) @package_name)
@@ -150,7 +141,7 @@ def parse_java_file(file_path):
             entry['imports'] = imports
 
         # Iterate through top-level declarations (classes, interfaces, enums, records)
-        #for child in root_node.children:
+        # for child in root_node.children:
         types = ["clazz", "rec", "itf", "enum"]
         for t in types:
             if t in captures and len(captures[t]):
@@ -162,7 +153,6 @@ def parse_java_file(file_path):
                     extends_clause, implements_clause = extract_extends_implements(child, source_code_bytes)
                     class_signature = f"{modifiers} {node_type} {name}{type_parameters} {extends_clause} {implements_clause}".strip().replace('  ', ' ')
 
-        # Add the class entry, now including the package name
                     index_entries.append(f"  {node_type.upper()}: {class_signature}")
                     entry['entity'] = class_signature
                     entry['name'] = name
@@ -230,7 +220,7 @@ def create_project_index(project_root_dir):
     """
     full_project_index = []
     for root, _, files in tqdm(os.walk(project_root_dir), desc="Parsing files", unit="file"):
-        sleep(.1)
+        #sleep(.1)
         for file in files:
             if file.endswith(".java"):# and "Options" in file:
                 file_path = os.path.join(root, file)
@@ -243,19 +233,9 @@ def create_project_index(project_root_dir):
     return full_project_index
 
 if __name__ == "__main__":
-    # --- Instructions for User ---
-    print("--- Java Codebase Indexer ---")
-    print("Before running:")
-    print("1. Install tree-sitter: pip install tree-sitter")
-    print("2. Clone the tree-sitter-java grammar:")
-    print("   git clone https://github.com/tree-sitter/tree-sitter-java.git ./grammars/tree-sitter-java")
-    print("3. Ensure the JAVA_GRAMMAR_PATH and LANGUAGE_SO_FILE are correctly set in this script.")
-    print("   The script will attempt to compile the grammar for you if the .so/.dll file is not found.")
-    print("-" * 30)
-
-    # --- User Input for Project Path ---
     #project_path = input("Enter the path to your Java project root directory: ")
-    project_path = "/home/ff/desenv/jcurl-http-client/src/main/java"
+    #project_path = "/home/ff/desenv/jcurl-http-client/src/main/java"
+    project_path = "/home/wsl/desenv/big/big-gaia/big-gaia-api/src/main/java"
     if not os.path.isdir(project_path):
         print(f"Error: '{project_path}' is not a valid directory.")
     else:
@@ -265,11 +245,9 @@ if __name__ == "__main__":
         for entry in project_index:
             print(json.dumps(entry))
 
-        # Optional: Save the index to a file
         output_file = "java_codebase_index.txt"
         with open(output_file, "w") as f:
-            for entry in project_index:
-                f.write(json.dumps(entry) + "\n")
+            f.write(json.dumps(project_index))
 
         print("You can now feed the content of 'java_codebase_index.txt' to your LLM.")
 
