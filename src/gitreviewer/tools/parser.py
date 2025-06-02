@@ -1,4 +1,5 @@
 import os
+import json
 import tree_sitter
 from time import sleep
 from tqdm import tqdm
@@ -103,6 +104,14 @@ def parse_java_file(file_path):
     Returns a list of strings, each representing a structural element.
     """
     index_entries = []
+    entry = {
+        'package': '',
+        'entity': {},
+        'type': '',
+        'imports': [],
+        'methods': [],
+        'fields': []
+    }
     try:
         with open(file_path, 'rb') as f:
             source_code_bytes = f.read()
@@ -136,15 +145,21 @@ def parse_java_file(file_path):
                 current_package = get_node_text(package_name_node, source_code_bytes)
 
             index_entries.append(f"PACKAGE: {current_package}")
+            entry['package'] = current_package
+
+        entry['package'] = current_package
 
         if "import_name" in captures:
+            imports = []
             imp = captures["import_name"]
             if q :
                 for i in imp:
                     import_name_node = i
                     current_imp = get_node_text(import_name_node, source_code_bytes)
                     index_entries.append(f"IMPORT: {current_imp}")
+                    imports.append(current_imp)
 
+            entry['imports'] = imports
 
         # Iterate through top-level declarations (classes, interfaces, enums, records)
         #for child in root_node.children:
@@ -161,8 +176,15 @@ def parse_java_file(file_path):
 
         # Add the class entry, now including the package name
                     index_entries.append(f"  {node_type.upper()}: {class_signature}")
+                    entry['entity'] = class_signature
+                    entry['name'] = name
+                    entry['type'] = node_type
+                    entry['modifiers'] = modifiers
 
                     body_node = child.child_by_field_name('body')
+                    methods = []
+                    fields = []
+                    constructors = []
                     if body_node:
                         for member_node in body_node.children:
                             if member_node.type == 'method_declaration':
@@ -177,6 +199,7 @@ def parse_java_file(file_path):
 
                                 method_signature = f"{method_modifiers} {method_type_parameters} {return_type} {method_name}({method_params}) {throws_clause}".strip().replace('  ', ' ')
                                 index_entries.append(f"    METHOD: {method_signature}")
+                                methods.append(method_signature)
 
                             elif member_node.type == 'field_declaration':
                                 field_modifiers = extract_modifiers(member_node, source_code_bytes)
@@ -189,6 +212,7 @@ def parse_java_file(file_path):
                                         field_name = get_node_text(field_name_node, source_code_bytes) if field_name_node else ""
                                         field_signature = f"{field_modifiers} {field_type} {field_name}".strip().replace('  ', ' ')
                                         index_entries.append(f"    FIELD: {field_signature}")
+                                        fields.append(field_signature)
 
                             elif member_node.type == 'constructor_declaration':
                                 constructor_modifiers = extract_modifiers(member_node, source_code_bytes)
@@ -199,13 +223,17 @@ def parse_java_file(file_path):
 
                                 constructor_signature = f"{constructor_modifiers} {constructor_name}({constructor_params}) {throws_clause}".strip().replace('  ', ' ')
                                 index_entries.append(f"    CONSTRUCTOR: {constructor_signature}")
+                                constructors.append(constructor_signature)
+                    entry['constructors'] = constructors
+                    entry['fields'] = fields
+                    entry['methods'] = methods
 
     except FileNotFoundError:
         index_entries.append(f"Error: File not found at {file_path}")
     except Exception as e:
         index_entries.append(f"Error parsing {file_path}: {e}")
 
-    return index_entries
+    return entry
 
 def create_project_index(project_root_dir):
     """
@@ -214,14 +242,16 @@ def create_project_index(project_root_dir):
     """
     full_project_index = []
     for root, _, files in tqdm(os.walk(project_root_dir), desc="Parsing files", unit="file"):
-        sleep(.5)
+        sleep(.1)
         for file in files:
             if file.endswith(".java"):# and "Options" in file:
                 file_path = os.path.join(root, file)
                 #print(f"Processing: {file_path}")
                 file_index = parse_java_file(file_path)
-                full_project_index.extend(file_index)
-                full_project_index.append("-" * 50) # Separator for readability
+                full_project_index.append(file_index)
+                #print(file_index)
+                #ull_project_index.extend(file_index)
+                #full_project_index.append("-" * 50) # Separator for readability
     return full_project_index
 
 if __name__ == "__main__":
@@ -245,13 +275,13 @@ if __name__ == "__main__":
         project_index = create_project_index(project_path)
 
         for entry in project_index:
-            print(entry)
+            print(json.dumps(entry))
 
         # Optional: Save the index to a file
         output_file = "java_codebase_index.txt"
         with open(output_file, "w") as f:
             for entry in project_index:
-                f.write(entry + "\n")
+                f.write(json.dumps(entry) + "\n")
 
         print("You can now feed the content of 'java_codebase_index.txt' to your LLM.")
 
