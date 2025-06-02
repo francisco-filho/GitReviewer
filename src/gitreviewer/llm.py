@@ -1,7 +1,5 @@
 import ollama
-import logging
-
-logger = logging.getLogger("gitreviewer.llm")
+from gitreviewer.util import logger
 
 default_model = "deepseek-r1:8b"
 
@@ -12,8 +10,10 @@ class LLM:
             stream = ollama.chat(
                 model=model_name,
                 messages=[{'role': 'user', 'content': prompt},],
+                stream=True,
                 think=think)
 
+            logger.info("Receiving chunks")
             for chunk in stream:
                 if 'message' in chunk and 'content' in chunk['message']:
                     yield chunk['message']['content']
@@ -22,6 +22,7 @@ class LLM:
             logger.error(f"\nError communicating with Ollama LLM: {e}. Make sure your Ollama server is running and the model '{model_name}' is downloaded.")
             yield None
         except Exception as e:
+            logger.error(e)
             logger.error(f"\nAn unexpected error occurred during LLM review: {e}")
             yield None
 

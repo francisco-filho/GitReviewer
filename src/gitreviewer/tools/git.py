@@ -1,8 +1,19 @@
-import logging
 from git import Repo, InvalidGitRepositoryError
+from gitreviewer.util import logger
+from gitreviewer.llm import LLM
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("gitreviewer")
+class GitMessageSugestion:
+    def get_commit_message(self, diff):
+        msgprompt = f"""
+            Sugest a commit message for the following diff: \n\n
+
+            Diff:\n
+             {diff}
+            """
+
+        llm = LLM()
+        return llm.chat(msgprompt)
+
 
 class GitDiffTool:
 
@@ -18,6 +29,7 @@ class GitDiffTool:
                 diff = repo.git.diff('HEAD')
                 if not diff:
                     logger.info("No changes detected in the working directory relative to HEAD.")
+                    return None
                 return diff
             else:
                 return None
