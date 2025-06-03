@@ -26,15 +26,18 @@ class LLM:
             logger.error(f"\nAn unexpected error occurred during LLM review: {e}")
             yield None
 
-    def chat(self, prompt, model_name=default_model, think=False):
+    def chat(self, prompt, model_name=default_model, output=None, think=False):
         try:
             chunk = ollama.chat(
                 model=model_name,
                 messages=[{'role': 'user', 'content': prompt},],
-                think=think)
+                think=think,
+                format=output.model_json_schema() if output else None
+            )
 
             if 'message' in chunk and 'content' in chunk['message']:
                 return chunk['message']['content']
+            return ""
 
         except ollama.ResponseError as e:
             logger.error(f"\nError communicating with Ollama LLM: {e}. Make sure your Ollama server is running and the model '{model_name}' is downloaded.")

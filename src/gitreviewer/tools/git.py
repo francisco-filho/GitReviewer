@@ -1,18 +1,46 @@
+from pydantic import BaseModel
 from git import Repo, InvalidGitRepositoryError
 from gitreviewer.util import logger
 from gitreviewer.llm import LLM
 
-class GitMessageSugestion:
+class CommitMessage(BaseModel):
+    message: str
+    details: list[str]
+
+class GitMessageSuggestion:
     def get_commit_message(self, diff):
         msgprompt = f"""
+            You are a developer that write good commit messages:
+
+
+            The first line should be the main description of the changes
+            You can follow with a flat list of details, 3 at maximum
+
             Sugest a commit message for the following diff: \n\n
 
             Diff:\n
              {diff}
+
+            Respond only with the commit message, do not explain anything.
+
+            You should  return the commit message in the following format:
+
+            ```
+            {{"message": "Create endpoint to serve requestes", "details": ["a", "b"]}}
+            ```
+            """
+        """
+            ``` 
+            Create endpoint to serve requests
+
+            - Add secure endpoint
+            - Connect to datasource
+
+            ```
             """
 
         llm = LLM()
-        return llm.chat(msgprompt)
+        return llm.chat(msgprompt, output=CommitMessage)
 
 
 class GitDiffTool:
