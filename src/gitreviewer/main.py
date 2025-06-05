@@ -2,9 +2,6 @@ import os
 import argparse
 
 from gitreviewer.repl import init_repl
-from gitreviewer.util import logger
-from gitreviewer.tools.git import GitDiffTool, GitMessageSuggestion
-from gitreviewer.tools.code_review import CodeReviewer
 
 
 def main():
