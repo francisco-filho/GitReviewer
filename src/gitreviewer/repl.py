@@ -49,7 +49,7 @@ def run_commit_command(repo_path, diff):
 
         # Ask the user if they want to commit
         while True:
-            user_confirm = input("Do you want to add all changes and commit with this message? (y/N): ").strip().lower()
+            user_confirm = input("Do you want commit the changes of all modified files using the message above? (y/N): ").strip().lower()
             if user_confirm == 'y':
                 try:
                     # Add all changes to the staging area
@@ -77,14 +77,7 @@ def run_commit_command(repo_path, diff):
         print("Could not generate a commit message suggestion.")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="GitReviewer CLI REPL.")
-    parser.add_argument("--repo", default=".", help="Path to the Git repository.")
-    parser.add_argument("--model", default="deepseek-r1:8b", help="Name of the Ollama model to use (default: deepseek-r1:8b).")
-
-    args = parser.parse_args()
-
-    repo_path = os.path.abspath(args.repo)
+def init_repl(repo_path, model=None):
     print(f"GitReviewer REPL. Reviewing repository: {repo_path}")
     print("Type /commit to get a commit message suggestion based on current diff.")
     print("Type /exit to quit.")
@@ -113,4 +106,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    init_repl(".", "gemini-2.5-flash-preview-05-20")

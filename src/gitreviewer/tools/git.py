@@ -1,13 +1,11 @@
-from pydantic import BaseModel
 from git import Repo, InvalidGitRepositoryError
+
+from gitreviewer.models import CommitMessage
 from gitreviewer.util import logger, DEFAULT_MODEL
 from gitreviewer.llm import get_client
 
 GIT_MODEL = DEFAULT_MODEL
 
-class CommitMessage(BaseModel):
-    message: str
-    details: list[str]
 
 class GitMessageSuggestion:
     def get_commit_message(self, diff):
@@ -25,21 +23,11 @@ class GitMessageSuggestion:
 
             Respond only with the commit message, do not explain anything.
 
-            You should  return the commit message in the following format:
-
-            ```
-            {{"message": "Create endpoint to serve requestes", "details": ["a", "b"]}}
-            ```
             """
+
         """
-            ``` 
-            Create endpoint to serve requests
-
-            - Add secure endpoint
-            - Connect to datasource
-
-            ```
-            """
+        {"message": "Refactor GitReviewer for improved LLM integration and REPL functionality", "details": ["Introduced a `_get_config` method in `LLMGoogle` to centralize configuration handling for LLM calls.", "Refactored `main.py` to use a new `init_repl` function, streamlining the application's entry point and focusing on a REPL interface.", "Moved the `CommitMessage` Pydantic model to a dedicated `models.py` file for better organization and reusability."]}
+        """
 
         llm = get_client(GIT_MODEL)
         msg = llm.chat(msgprompt, output=CommitMessage)

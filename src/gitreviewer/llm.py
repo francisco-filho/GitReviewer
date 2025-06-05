@@ -1,6 +1,9 @@
 import ollama
+
+from gitreviewer.models import CommitMessage
 from gitreviewer.util import logger
 from google import genai
+from google.genai import types
 
 default_model = "deepseek-r1:8b"
 
@@ -28,14 +31,21 @@ class LLMGoogle(LLM):
         self.model = model_name
         self.client = genai.Client()
 
+    def _get_config(self, **kwargs):
+        thinking = 0 if not kwargs["think"] else kwargs["think"]
+        config = genai.types.GenerateContentConfig(
+            thinking_config=genai.types.ThinkingConfig(thinking_budget=thinking)
+        )
+        if kwargs["output"]:
+            config.response_mime_type =  "application/json"
+            config.response_schema = kwargs["output"]
+        return config;
+
     def chat(self, prompt, model_name=default_model, output=None, think=None):
-        thinking = 0 if not think else think
         resp = self.client.models.generate_content(
             contents=prompt,
             model=model_name,
-            config=genai.types.GenerateContentConfig(
-                thinking_config=genai.types.ThinkingConfig(thinking_budget=thinking)
-            )
+            config=self._get_config(output=output, think=think)
         )
         return resp.text
 
