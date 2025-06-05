@@ -24,7 +24,6 @@ class CodeReviewer(object):
             yield None
             return
 
-        logger.debug("Sending diff to LLM model and streaming response...")
         llm = get_client(MODEL_REVIEWER)
         for token in llm.chat_stream(REVIEW_PROMPT.format(diff_content=diff_content)):
             yield token

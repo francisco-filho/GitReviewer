@@ -2,6 +2,7 @@ import argparse
 import os
 from gitreviewer.util import logger
 from gitreviewer.tools.git import GitDiffTool, GitMessageSuggestion
+from gitreviewer.tools.code_review import CodeReviewer
 from git import Repo, InvalidGitRepositoryError
 
 
@@ -76,10 +77,25 @@ def run_commit_command(repo_path, diff):
     else:
         print("Could not generate a commit message suggestion.")
 
+def run_review_command(diff_content):
+    """
+    Executes the /review command to perform a code review and stream the response.
+    """
+    if not diff_content:
+        print("No changes detected to review.")
+        return
+
+    reviewer = CodeReviewer()
+    print("\n--- LLM Code Review Feedback (Streaming) ---")
+    for chunk in reviewer.review(diff_content):
+        if chunk is not None: # Ensure we don't print None if review returns it
+            print(chunk, end='', flush=True)
+    print("\n--------------------------------------------\n")
 
 def init_repl(repo_path, model=None):
     print(f"GitReviewer REPL. Reviewing repository: {repo_path}")
     print("Type /commit to get a commit message suggestion based on current diff.")
+    print("Type /review to get a code review based on current diff.") # New command
     print("Type /exit to quit.")
 
     diff_tool = GitDiffTool()
@@ -96,6 +112,11 @@ def init_repl(repo_path, model=None):
                 diff = diff_tool.get_git_diff(repo_path)
                 logger.debug(f"\n--- Git Diff ---\n\n{diff}\n---------------") # Keep logger.debug
                 run_commit_command(repo_path, diff) # Pass repo_path to the command function
+            elif command == "review":  # New command handler
+                logger.info("Getting git diff for code review...")
+                diff = diff_tool.get_git_diff(repo_path)
+                logger.debug(f"\n--- Git Diff for Review ---\n\n{diff}\n---------------")
+                run_review_command(diff)  # Pass the diff to the review function
             elif command == "exit":
                 print("Exiting GitReviewer REPL.")
                 break

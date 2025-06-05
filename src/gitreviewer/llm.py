@@ -1,6 +1,5 @@
 import ollama
 
-from gitreviewer.models import CommitMessage
 from gitreviewer.util import logger
 from google import genai
 from google.genai import types
@@ -32,7 +31,7 @@ class LLMGoogle(LLM):
         self.client = genai.Client()
 
     def _get_config(self, **kwargs):
-        thinking = 0 if not kwargs["think"] else kwargs["think"]
+        thinking = 0 if "think" not in kwargs else int(kwargs["think"])
         config = genai.types.GenerateContentConfig(
             thinking_config=genai.types.ThinkingConfig(thinking_budget=thinking)
         )
@@ -49,14 +48,11 @@ class LLMGoogle(LLM):
         )
         return resp.text
 
-    def chat_stream(self, prompt, model_name=default_model, think=False):
-        thinking = 0 if not think else think
+    def chat_stream(self, prompt, model_name=default_model, output=None, think=False):
         chunks = self.client.models.generate_content_stream(
             contents=prompt,
             model=model_name,
-            config=genai.types.GenerateContentConfig(
-                thinking_config=genai.types.ThinkingConfig(thinking_budget=thinking)
-            )
+            config=self._get_config(output=output, think=think),
         )
 
         for chunk in chunks:
