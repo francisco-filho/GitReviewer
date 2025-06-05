@@ -1,7 +1,9 @@
 from pydantic import BaseModel
 from git import Repo, InvalidGitRepositoryError
-from gitreviewer.util import logger
-from gitreviewer.llm import LLM
+from gitreviewer.util import logger, DEFAULT_MODEL
+from gitreviewer.llm import get_client
+
+GIT_MODEL = DEFAULT_MODEL
 
 class CommitMessage(BaseModel):
     message: str
@@ -39,8 +41,9 @@ class GitMessageSuggestion:
             ```
             """
 
-        llm = LLM()
-        return llm.chat(msgprompt, output=CommitMessage)
+        llm = get_client(GIT_MODEL)
+        msg = llm.chat(msgprompt, output=CommitMessage)
+        return CommitMessage.model_validate_json(msg)
 
 
 class GitDiffTool:

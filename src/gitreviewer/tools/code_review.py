@@ -1,5 +1,5 @@
-from gitreviewer.llm import LLM
-from gitreviewer.util import logger
+from gitreviewer.llm import get_client
+from gitreviewer.util import logger, DEFAULT_MODEL
 
 REVIEW_PROMPT = """
 You are a code reviewer. Please review the following git diff and provide feedback on potential issues,
@@ -14,6 +14,7 @@ Provide your feedback in a concise and clear manner.
 Finish with recommendations.
 """
 
+MODEL_REVIEWER = DEFAULT_MODEL
 
 class CodeReviewer(object):
 
@@ -24,6 +25,6 @@ class CodeReviewer(object):
             return
 
         logger.debug("Sending diff to LLM model and streaming response...")
-        llm = LLM()
+        llm = get_client(MODEL_REVIEWER)
         for token in llm.chat_stream(REVIEW_PROMPT.format(diff_content=diff_content)):
             yield token

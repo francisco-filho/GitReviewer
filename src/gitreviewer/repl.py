@@ -1,0 +1,116 @@
+import argparse
+import os
+from gitreviewer.util import logger
+from gitreviewer.tools.git import GitDiffTool, GitMessageSuggestion
+from git import Repo, InvalidGitRepositoryError
+
+
+def run_commit_command(repo_path, diff):
+    """
+    Executes the /commit command to generate a commit message suggestion
+    and optionally commits the changes.
+    """
+    if not diff:
+        print("No changes detected to suggest a commit message.")
+        return
+
+    sug = GitMessageSuggestion()
+    commit_suggestion = sug.get_commit_message(diff)
+
+    if commit_suggestion:
+        print("\n--- Commit Message Suggestion ---")
+        print(f"Message: {commit_suggestion.message}")
+        if commit_suggestion.details:
+            print("Details:")
+            for detail in commit_suggestion.details:
+                print(f"- {detail}")
+        print("---------------------------------\n")
+
+        try:
+            repo = Repo(repo_path)
+            # Get the current status of the repository
+            status_output = repo.git.status('--short')
+
+            if status_output:
+                print("\n--- Files to be staged and committed ---")
+                print(status_output)
+                print("----------------------------------------\n")
+            else:
+                print("\nNo changes detected in the working directory or staging area.")
+                print("Commit will not proceed as there's nothing to commit.\n")
+                return
+
+        except InvalidGitRepositoryError:
+            logger.error(f"Error: '{repo_path}' is not a valid Git repository.")
+            return
+        except Exception as e:
+            logger.error(f"An error occurred while getting repository status: {e}")
+            return
+
+        # Ask the user if they want to commit
+        while True:
+            user_confirm = input("Do you want to add all changes and commit with this message? (y/N): ").strip().lower()
+            if user_confirm == 'y':
+                try:
+                    # Add all changes to the staging area
+                    repo.git.add(A=True) # Use A=True to add all untracked and modified files
+                    # Commit with the suggested message
+                    commit_message_full = commit_suggestion.message
+                    if commit_suggestion.details:
+                        commit_message_full += "\n\n" + "\n".join([f"- {d}" for d in commit_suggestion.details])
+
+                    repo.git.commit(m=commit_message_full)
+                    print("\nChanges staged and committed successfully!")
+                    break
+                except InvalidGitRepositoryError:
+                    logger.error(f"Error: '{repo_path}' is not a valid Git repository.")
+                    break
+                except Exception as e:
+                    logger.error(f"An error occurred during commit: {e}")
+                    break
+            elif user_confirm == 'n' or user_confirm == '':
+                print("Commit aborted. No changes were committed.")
+                break
+            else:
+                print("Invalid input. Please enter 'y' or 'N'.")
+    else:
+        print("Could not generate a commit message suggestion.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="GitReviewer CLI REPL.")
+    parser.add_argument("--repo", default=".", help="Path to the Git repository.")
+    parser.add_argument("--model", default="deepseek-r1:8b", help="Name of the Ollama model to use (default: deepseek-r1:8b).")
+
+    args = parser.parse_args()
+
+    repo_path = os.path.abspath(args.repo)
+    print(f"GitReviewer REPL. Reviewing repository: {repo_path}")
+    print("Type /commit to get a commit message suggestion based on current diff.")
+    print("Type /exit to quit.")
+
+    diff_tool = GitDiffTool()
+
+    while True:
+        user_input = input("gitreviewer> ").strip()
+
+        if user_input.startswith("/"):
+            command_parts = user_input[1:].split(' ', 1)
+            command = command_parts[0]
+
+            if command == "commit":
+                logger.info("Getting git diff...") # Keep logger.info for internal process messages
+                diff = diff_tool.get_git_diff(repo_path)
+                logger.debug(f"\n--- Git Diff ---\n\n{diff}\n---------------") # Keep logger.debug
+                run_commit_command(repo_path, diff) # Pass repo_path to the command function
+            elif command == "exit":
+                print("Exiting GitReviewer REPL.")
+                break
+            else:
+                print(f"Unknown command: /{command}")
+        else:
+            print("Unknown command. Commands start with '/'.")
+
+
+if __name__ == "__main__":
+    main()
