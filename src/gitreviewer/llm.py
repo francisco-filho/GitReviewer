@@ -40,7 +40,7 @@ class LLMGoogle(LLM):
             config.response_schema = kwargs["output"]
         return config;
 
-    def chat(self, prompt, model_name=default_model, output=None, think=None):
+    def chat(self, prompt, model_name=default_model, output=None, think=0):
         resp = self.client.models.generate_content(
             contents=prompt,
             model=model_name,
@@ -48,7 +48,7 @@ class LLMGoogle(LLM):
         )
         return resp.text
 
-    def chat_stream(self, prompt, model_name=default_model, output=None, think=False):
+    def chat_stream(self, prompt, model_name=default_model, output=None, think=0):
         chunks = self.client.models.generate_content_stream(
             contents=prompt,
             model=model_name,
