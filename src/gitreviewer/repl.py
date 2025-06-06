@@ -49,12 +49,11 @@ def run_commit_command(repo_path, diff):
 
         # Ask the user if they want to commit
         while True:
-            user_confirm = input("Do you want commit the changes of all modified files using the message above? (y/N): ").strip().lower()
+            user_confirm = input("Do you want commit the changes staged for commit? (y/N): ").strip().lower()
             if user_confirm == 'y':
                 try:
-                    # Add all changes to the staging area
-                    repo.git.add(A=True) # Use A=True to add all untracked and modified files
-                    # Commit with the suggested message
+                    #repo.git.add(U=True)
+
                     commit_message_full = commit_suggestion.message
                     if commit_suggestion.details:
                         commit_message_full += "\n\n" + "\n".join([f"- {d}" for d in commit_suggestion.details])
