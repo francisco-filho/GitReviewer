@@ -1,9 +1,13 @@
+import os
+import pathlib
+from tqdm import tqdm
 from git import Repo, InvalidGitRepositoryError
 
 from gitreviewer.tools.code_review import CodeReviewer
 from gitreviewer.tools.git import GitDiffTool, GitMessageSuggestion
 from gitreviewer.util import logger
 
+from gitreviewer.parser import PythonParser
 
 def run_commit_command(repo_path, diff):
     """
@@ -90,10 +94,62 @@ def run_review_command(diff_content):
             print(chunk, end='', flush=True)
     print("\n--------------------------------------------\n")
 
+def run_index_command(repo_path):
+    """
+    Indexes all Python files in the repository and saves the parsed output to a file.
+    """
+    logger.info(f"Indexing Python files in: {repo_path}")
+    project_name = pathlib.Path(repo_path).name
+    output_filename = f"{project_name}-index.txt"
+    indexed_files_count = 0
+
+    ignored_directories = ['.venv', '.git', '__pycache__', '.pytest_cache', 'build', 'dist'] # Added common ignored directories
+
+
+    # Check if it's a Python project
+    is_python_project = False
+    for root, _, files in os.walk(repo_path):
+        for file in files:
+            if file.endswith(".py"):
+                is_python_project = True
+                break
+        if is_python_project:
+            break
+
+    if not is_python_project:
+        print(f"'{project_name}' does not appear to be a Python project (no .py files found). Indexing aborted.")
+        return
+
+    with open(output_filename, "w", encoding="utf-8") as outfile:
+        for root, dirs, files in tqdm(os.walk(repo_path)):
+            dirs[:] = [d for d in dirs if d not in ignored_directories]
+
+            for file in files:
+                if file.endswith(".py"):
+                    file_path = os.path.join(root, file)
+                    logger.debug(f"Parsing file: {file_path}")
+                    try:
+                        parser = PythonParser()
+                        parsed_content = parser.parse(file_path)
+                        if not parsed_content:
+                            continue
+                        outfile.write(parsed_content)
+                        outfile.write("\n" + "-"*80 + "\n") # Separator between files
+                        indexed_files_count += 1
+                    except Exception as e:
+                        logger.error(f"Error parsing {file_path}: {e}")
+
+    if indexed_files_count > 0:
+        print(f"Successfully indexed {indexed_files_count} Python files. Output saved to '{output_filename}'")
+    else:
+        print(f"No Python files were indexed in '{repo_path}'.")
+
+
 def init_repl(repo_path, model=None):
     print(f"GitReviewer REPL. Reviewing repository: {repo_path}")
     print("Type /commit to get a commit message suggestion based on current diff.")
-    print("Type /review to get a code review based on current diff.") # New command
+    print("Type /review to get a code review based on current diff.")
+    print("Type /index to index all Python files in the repository.")
     print("Type /exit to quit.")
 
     diff_tool = GitDiffTool()
@@ -115,6 +171,8 @@ def init_repl(repo_path, model=None):
                 diff = diff_tool.get_git_diff(repo_path)
                 logger.debug(f"\n--- Git Diff for Review ---\n\n{diff}\n---------------")
                 run_review_command(diff)
+            elif command == "index":
+                run_index_command(repo_path)
             elif command == "exit":
                 print("Exiting GitReviewer REPL.")
                 break
