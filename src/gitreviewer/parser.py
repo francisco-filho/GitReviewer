@@ -1,4 +1,7 @@
+import os
 from tree_sitter_language_pack import get_language, get_parser
+
+from gitreviewer.util import logger
 
 language = "python"
 parser = get_parser(language)
@@ -54,34 +57,39 @@ class PythonParser():
         with open(file, "rb") as f:
             self.contents = f.read()
 
+        if os.path.getsize(file) == 0:
+            logger.info(f"# file: {file}\n# File is empty, no definitions to extract.")
+            return None
+
         self.tree = parser.parse(self.contents)
 
         output_lines = []
         output_lines.append(f"# file: {file}\n")
-        output_lines.append(f"# {file}")
 
         imports = self.get_imports()
         for i in imports:
             output_lines.append(i)
-        if imports: # Add a blank line only if there were imports
+        if imports:
             output_lines.append("")
 
 
         module_functions = self.get_module_functions()
         for f in module_functions:
-            doc_string = f['doc'] if f['doc'] else '""""""'
+            doc_string = f['doc'] if f['doc'] else ''
             output_lines.append(f"def {f['name']}{f['params']}:\n  {doc_string}\n")
-        if module_functions: # Add a blank line only if there were module functions
+        if module_functions:
             output_lines.append("")
 
         classes = self.get_classes()
         for c in classes:
-            class_doc_string = c['doc'] if c['doc'] else '""""""'
-            output_lines.append(f"class {c['name']}{c['params']}:\n  {class_doc_string}")
+            class_doc_string = c['doc'] if 'doc' in c else ''
+            class_params = c['params'] if 'params' in c else ''
+            output_lines.append(f"class {c['name']}{class_params}:\n  {class_doc_string}")
             for m in c['methods']:
-                method_doc_string = m['doc'] if m['doc'] else '""""""'
-                output_lines.append(f"  def {m['name']}{m['params']}:\n    {method_doc_string}\n")
-            output_lines.append("") # Blank line after each class
+                method_doc_string = m['doc'] if m['doc'] else ''
+                method_params = m['params'] if 'params' in m else ''
+                output_lines.append(f"  def {m['name']}{method_params}:\n    {method_doc_string}\n")
+            output_lines.append("")
 
         return "\n".join(output_lines)
 
@@ -169,10 +177,9 @@ class PythonParser():
         """
 
         qi = lang.query(imports_scm)
-        # Using captures directly on 'is' to get all matches for both import types
-        matches = [capture for node, field in qi.captures(self.tree.root_node) if field == 'is']
+        matches = qi.captures(self.tree.root_node)
 
-        return [text(i, self.contents) for i in matches]
+        return [text(i, self.contents) for i in matches['is']]
 
     def get_module_functions(self):
         """Extracts top-level function definitions from the parsed Python file.
@@ -207,7 +214,7 @@ class PythonParser():
 
 
 if __name__ == "__main__":
-    file_path = "src/gitreviewer/parser.py"
+    file_path = "/home/wsl/desenv/ai/GitReviewer/src/gitreviewer/llm.py"
     p = PythonParser()
     # Call parse and directly print the returned string
     parsed_output = p.parse(file_path)
