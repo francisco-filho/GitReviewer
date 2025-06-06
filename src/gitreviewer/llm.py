@@ -7,6 +7,8 @@ from google.genai import types
 default_model = "deepseek-r1:8b"
 
 def get_client(model: str = default_model):
+    """Get a client implementation based on the model name."""
+
     if model == "default":
         return LLMOllama()
     elif model == "deepseek-r1:8b":
@@ -17,6 +19,8 @@ def get_client(model: str = default_model):
         return LLMOllama()
 
 class LLM:
+    """ Interface básica """
+
     def chat_stream(self, prompt, model_name=default_model, think=False):
         pass
 
@@ -25,12 +29,15 @@ class LLM:
 
 
 class LLMGoogle(LLM):
+    """ LLM Client for Google Gemini"""
+
     default_model = "gemini-2.5-flash-preview-05-20"
     def __init__(self, model_name=default_model):
         self.model = model_name
         self.client = genai.Client()
 
     def _get_config(self, **kwargs):
+        """ Create config for google client """
         thinking = 0 if "think" not in kwargs else int(kwargs["think"])
         config = genai.types.GenerateContentConfig(
             thinking_config=genai.types.ThinkingConfig(thinking_budget=thinking)

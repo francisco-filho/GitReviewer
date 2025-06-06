@@ -1,0 +1,43 @@
+import ollama
+from google.genai import types
+from google import genai
+from gitreviewer.util import logger
+# Code structure of file: src/gitreviewer/llm.py
+# --------------------
+class LLM:
+""" Interface básica """
+  def chat_stream(self, prompt, model_name=default_model, think=False):
+  
+
+  def chat(self, prompt, model_name=default_model, output=None, think=False):
+  
+
+# Code structure of file: src/gitreviewer/llm.py
+# --------------------
+class LLMGoogle(LLM):
+""" LLM Client for Google Gemini"""
+  def __init__(self, model_name=default_model):
+  
+
+  def _get_config(self, **kwargs):
+  """ Create config for google client """
+
+  def chat(self, prompt, model_name=default_model, output=None, think=0):
+  
+
+  def chat_stream(self, prompt, model_name=default_model, output=None, think=0):
+  
+
+# Code structure of file: src/gitreviewer/llm.py
+# --------------------
+class LLMOllama(LLM):
+
+  def __init__(self, model_name=default_model):
+  
+
+  def chat_stream(self, prompt, model_name=default, think=False):
+  
+
+  def chat(self, prompt, model_name=default, output=None, think=False):
+  
+
