@@ -45,7 +45,7 @@ class GitDiffTool:
             repo = Repo(repo_path)
             if repo.is_dirty(untracked_files=True):
                 # get staged and unstaged changes relative to HEAD
-                diff = repo.git.diff('HEAD')
+                diff = repo.git.diff('HEAD', staged=True)
                 if not diff:
                     logger.info("No changes detected in the working directory relative to HEAD.")
                     return None
