@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("httpx").setLevel(logging.ERROR)

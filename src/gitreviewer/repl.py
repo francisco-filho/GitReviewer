@@ -5,8 +5,9 @@ from git import Repo, InvalidGitRepositoryError
 
 from gitreviewer.tools.code_review import CodeReviewer
 from gitreviewer.tools.git import GitDiffTool, GitMessageSuggestion
-from gitreviewer.util import logger
+from gitreviewer.util import logger, DEFAULT_MODEL
 
+from gitreviewer.llm import get_client
 from gitreviewer.parser import PythonParser
 
 def run_commit_command(repo_path, diff):
@@ -144,12 +145,28 @@ def run_index_command(repo_path):
     else:
         print(f"No Python files were indexed in '{repo_path}'.")
 
+def run_chat_command(message):
+    """
+    Executes the /chat command to send a message to the LLM and stream the response.
+    """
+    if not message:
+        print("No message provided for chat.")
+        return
+
+    llm_client = get_client(DEFAULT_MODEL)  # Assuming get_client returns an instance of the LLM client
+    print("\n--- Chat with LLM (Streaming) ---")
+    for chunk in llm_client.chat_stream(message):
+        if chunk is not None:
+            print(chunk, end='', flush=True)
+    print("\n---------------------------------\n")
+
 
 def init_repl(repo_path, model=None):
     print(f"GitReviewer REPL. Reviewing repository: {repo_path}")
     print("Type /commit to get a commit message suggestion based on current diff.")
     print("Type /review to get a code review based on current diff.")
     print("Type /index to index all Python files in the repository.")
+    print("Type /chat {message} - send the message to the LLM and stream the response")
     print("Type /exit to quit.")
 
     diff_tool = GitDiffTool()
@@ -160,6 +177,11 @@ def init_repl(repo_path, model=None):
         if user_input.startswith("/"):
             command_parts = user_input[1:].split(' ', 1)
             command = command_parts[0]
+
+            if len(command_parts) > 1:
+                message = command_parts[1]
+            else:
+                message = ""
 
             if command == "commit":
                 logger.info("Getting git diff...")
@@ -173,6 +195,8 @@ def init_repl(repo_path, model=None):
                 run_review_command(diff)
             elif command == "index":
                 run_index_command(repo_path)
+            elif command == "chat":
+                run_chat_command(message)
             elif command == "exit":
                 print("Exiting GitReviewer REPL.")
                 break

@@ -11,8 +11,8 @@ def get_client(model: str = default_model):
 
     if model == "default":
         return LLMOllama()
-    elif model == "deepseek-r1:8b":
-        return LLMOllama()
+    elif model in ["deepseek-r1:8b", "qwen2.5-coder:14b"]:
+        return LLMOllama(model_name=model)
     elif model.startswith("gemini"):
         return LLMGoogle(model)
     else:
@@ -71,11 +71,12 @@ class LLMOllama(LLM):
 
     def __init__(self, model_name=default_model):
         self.model = model_name
+        logger.info(f"Using model: {self.model}")
 
-    def chat_stream(self, prompt, model_name=default, think=False):
+    def chat_stream(self, prompt, think=False):
         try:
             stream = ollama.chat(
-                model=model_name,
+                model=self.model,
                 messages=[{'role': 'user', 'content': prompt},],
                 stream=True,
                 think=think)
@@ -93,10 +94,10 @@ class LLMOllama(LLM):
             logger.error(f"\nAn unexpected error occurred during LLM review: {e}")
             yield None
 
-    def chat(self, prompt, model_name=default, output=None, think=False):
+    def chat(self, prompt, output=None, think=False):
         try:
             chunk = ollama.chat(
-                model=model_name,
+                model=self.model,
                 messages=[{'role': 'user', 'content': prompt},],
                 think=think,
                 format=output.model_json_schema() if output else None
