@@ -6,6 +6,7 @@ from git import Repo, InvalidGitRepositoryError
 from gitreviewer.tools.code_review import CodeReviewer
 from gitreviewer.tools.git import GitDiffTool, GitMessageSuggestion
 from gitreviewer.util import logger, DEFAULT_MODEL
+from gitreviewer.tools.tools import fn_definitions
 
 from gitreviewer.llm import get_client
 from gitreviewer.parser import PythonParser
@@ -153,12 +154,15 @@ def run_chat_command(message):
         print("No message provided for chat.")
         return
 
-    llm_client = get_client(DEFAULT_MODEL)  # Assuming get_client returns an instance of the LLM client
+    llm_client = get_client(DEFAULT_MODEL)
     print("\n--- Chat with LLM (Streaming) ---")
-    for chunk in llm_client.chat_stream(message):
-        if chunk is not None:
-            print(chunk, end='', flush=True)
-    print("\n---------------------------------\n")
+    chunk = llm_client.chat(message, tools=fn_definitions())
+    print(chunk.content)
+
+    #for chunk in llm_client.chat(message, tools=fn_definitions()):
+        #if chunk is not None:
+        #    print(chunk, end='', flush=True)
+    #print("\n---------------------------------\n")
 
 
 def init_repl(repo_path, model=None):

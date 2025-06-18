@@ -1,10 +1,22 @@
 import ollama
+from typing import Dict
+from pydantic import BaseModel
 
-from gitreviewer.util import logger
 from google import genai
 from google.genai import types
 
+from gitreviewer.util import logger
+
 default_model = "deepseek-r1:8b"
+
+
+class FunctionCall(BaseModel):
+    name: str
+    args: Dict
+
+class ChatResponse(BaseModel):
+    content: str | None
+    function_call: FunctionCall | None
 
 def get_client(model: str = default_model):
     """Get a client implementation based on the model name."""
@@ -39,21 +51,45 @@ class LLMGoogle(LLM):
     def _get_config(self, **kwargs):
         """ Create config for google client """
         thinking = 0 if "think" not in kwargs else int(kwargs["think"])
+
+        tools = types.Tool(function_declarations=kwargs["tools"])
+
         config = genai.types.GenerateContentConfig(
-            thinking_config=genai.types.ThinkingConfig(thinking_budget=thinking)
+            thinking_config=genai.types.ThinkingConfig(thinking_budget=thinking),
+            tools=[tools]
         )
+
         if kwargs["output"]:
             config.response_mime_type =  "application/json"
             config.response_schema = kwargs["output"]
+        if kwargs["tools"]:
+            print("--> Using tools")
+        #    config.tools = [types.Tool(function_declarations=kwargs["tools"])]
         return config;
 
-    def chat(self, prompt, model_name=default_model, output=None, think=0):
+    def chat(self, prompt, model_name=default_model, output=None, think=0, tools=[]) -> ChatResponse:
         resp = self.client.models.generate_content(
             contents=prompt,
             model=model_name,
-            config=self._get_config(output=output, think=think)
+            config=self._get_config(output=output, think=think, tools=tools)
         )
-        return resp.text
+        if resp.candidates[0].content.parts[0].function_call:
+            function_call = resp.candidates[0].content.parts[0].function_call
+            print(f"Function to call: {function_call.name}")
+            print(f"Arguments: {function_call.args}")
+            # Example from gemini docs
+            # In a real app, you would call your function here:
+            # result = schedule_meeting(**function_call.args)
+            # return f"call function : {function_call.name}({function_call.args})"
+            logger.info("-"*30)
+            logger.info(type(function_call.args))
+            logger.info(f"----> {function_call.args}")
+            return ChatResponse(
+                content=None,
+                function_call=FunctionCall(name=function_call.name, args=function_call.args)
+            )
+
+        return ChatResponse(content=resp.text, function_call=None)
 
     def chat_stream(self, prompt, model_name=default_model, output=None, think=0):
         chunks = self.client.models.generate_content_stream(

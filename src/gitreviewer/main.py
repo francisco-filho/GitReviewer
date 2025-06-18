@@ -3,6 +3,7 @@ import argparse
 
 from gitreviewer.repl import init_repl
 
+# TODO: IGNORE THIS: tool for rag search
 
 def main():
     parser = argparse.ArgumentParser(description="Review code changes in a Git repository using a local LLM.")

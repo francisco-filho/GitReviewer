@@ -31,7 +31,7 @@ class GitMessageSuggestion:
 
         llm = get_client(GIT_MODEL)
         msg = llm.chat(msgprompt, output=CommitMessage)
-        return CommitMessage.model_validate_json(msg)
+        return CommitMessage.model_validate_json(msg.content)
 
 
 class GitDiffTool:
