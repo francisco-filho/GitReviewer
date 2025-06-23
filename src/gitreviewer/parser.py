@@ -1,4 +1,5 @@
 import os
+import sys
 from tree_sitter_language_pack import get_language, get_parser
 
 from gitreviewer.util import logger
@@ -6,6 +7,8 @@ from gitreviewer.util import logger
 language = "python"
 parser = get_parser(language)
 lang = get_language(language)
+
+body_placeholder = "#...#"
 
 def text(node, source_code_bytes):
     """Extracts the text content of a Tree-sitter node.
@@ -64,7 +67,9 @@ class PythonParser():
         self.tree = parser.parse(self.contents)
 
         output_lines = []
-        output_lines.append(f"# file: {file}\n")
+        output_lines.append("#" + "="*30)
+        output_lines.append(f"# file: {os.path.relpath(file, os.getcwd())}")
+        output_lines.append("#" + "="*30)
 
         imports = self.get_imports()
         for i in imports:
@@ -76,7 +81,7 @@ class PythonParser():
         module_functions = self.get_module_functions()
         for f in module_functions:
             doc_string = f['doc'] if f['doc'] else ''
-            output_lines.append(f"def {f['name']}{f['params']}:\n  {doc_string}\n")
+            output_lines.append(f"def {f['name']}{f['params']}:\n  {doc_string}")
         if module_functions:
             output_lines.append("")
 
@@ -86,9 +91,10 @@ class PythonParser():
             class_params = c['params'] if 'params' in c else ''
             output_lines.append(f"class {c['name']}{class_params}:\n  {class_doc_string}")
             for m in c['methods']:
-                method_doc_string = m['doc'] if m['doc'] else ''
+                method_doc_string = f"{m['doc']}\n" if m['doc'] else ''
                 method_params = m['params'] if 'params' in m else ''
-                output_lines.append(f"  def {m['name']}{method_params}:\n    {method_doc_string}\n")
+                method_return = f" -> {m['ret']}" if 'ret' in m and m['ret'] else ''
+                output_lines.append(f"  def {m['name']}{method_params}{method_return}:\n    {method_doc_string}  {body_placeholder}")
             output_lines.append("")
 
         return "\n".join(output_lines)
@@ -110,6 +116,7 @@ class PythonParser():
         (function_definition
             name: (identifier) @nm
             parameters: (parameters) @param
+            return_type: (type)? @ret
             body: (block
                 (expression_statement (string))? @doc)
             )
@@ -123,6 +130,7 @@ class PythonParser():
             method = dict()
             method['name'] = text(get_node(m, 'nm'), self.contents)
             method['params'] = text(get_node(m, 'param'), self.contents)
+            method['ret'] = text(get_node(m, 'ret'), self.contents)
             method['doc'] = text(get_node(m, 'doc'), self.contents)
             methods.append(method)
 
@@ -194,6 +202,7 @@ class PythonParser():
             (function_definition
                 name: (identifier) @nm
                 parameters: (parameters) @param
+                return_type: (type)? @ret
                 body: (block
                     (expression_statement (string))? @doc)
             ) @function)
@@ -207,6 +216,7 @@ class PythonParser():
             function = dict()
             function['name'] = text(get_node(m, 'nm'), self.contents)
             function['params'] = text(get_node(m, 'param'), self.contents)
+            function['ret'] = text(get_node(m, 'ret'), self.contents)
             function['doc'] = text(get_node(m, 'doc'), self.contents)
             functions.append(function)
 
@@ -214,7 +224,11 @@ class PythonParser():
 
 
 if __name__ == "__main__":
-    file_path = "/home/wsl/desenv/ai/GitReviewer/src/gitreviewer/llm.py"
+    if len(sys.argv) < 2:
+        print("Inform the path of the file")
+        exit(1)
+    #file_path = "/home/ff/desenv/GitReviewer/src/gitreviewer/llm.py"
+    file_path = sys.argv[1]
     p = PythonParser()
     # Call parse and directly print the returned string
     parsed_output = p.parse(file_path)

@@ -6,7 +6,7 @@ from google.genai import types
 
 default_model = "deepseek-r1:8b"
 
-def get_client(model: str = default_model):
+def get_client(model: str = default_model) -> LLM:
     """Get a client implementation based on the model name."""
 
     if model == "default":
@@ -21,7 +21,7 @@ def get_client(model: str = default_model):
 class LLM:
     """ Interface básica """
 
-    def chat_stream(self, prompt, model_name=default_model, think=False):
+    def chat_stream(self, prompt, model_name=default_model, think=False) -> str | None:
         pass
 
     def chat(self, prompt, model_name=default_model, output=None, think=False):
@@ -47,7 +47,7 @@ class LLMGoogle(LLM):
             config.response_schema = kwargs["output"]
         return config;
 
-    def chat(self, prompt, model_name=default_model, output=None, think=0):
+    def chat(self, prompt: str, model_name=default_model, output=None, think=0):
         resp = self.client.models.generate_content(
             contents=prompt,
             model=model_name,
